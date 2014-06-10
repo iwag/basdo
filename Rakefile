@@ -1,30 +1,34 @@
+require 'json'
 
+$nodes = JSON.parse(File.read("config_node.json"))
 
-load "Conffile.rb"
+TAG = "iwag/buildstep"
 
 task :build do
-  sh "docker build -t iwag/buildstep ."
+  sh "docker build -t #{TAG} ."
 end
-#task :build do
-#	roles.each do |i|
-#		dockerpath = Conf[:dockerdir] + "/" + i
-#		puts "start builing " + dockerpath
-#		sh "cd #{dockerpath} && docker build -t #{i} ."
-#	end
-#end
 
 task :config do
-	nodes.each do |node|
-	   tag = roleByNode(node)
-		sh "docker run --name #{node} -d #{tag}"
-		puts `docker inspect --format='{{.NetworkSettings.IPAddress}}' #{node} `.chomp
+	$nodes.each do |i|
+    # setting gonyo gonyo ...
+		id = `cat ./services/#{i}/config.sh | docker run -i -a stdin #{TAG} /bin/bash -c "/bin/bash"`.chomp
+    #sh "docker attach #{id}"
+    sh "docker wait #{id}"
+    sh "docker stop #{id}"
+    sh "docker commit #{id} #{TAG}:#{i}"
+    # config on host
+		id = `docker run -d #{TAG}:#{i} /usr/sbin/sshd -D`.chomp
+		ip = `docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} `.chomp
+    # sh "services/#{i}/config_host.sh" if config_host exists
+    sh "docker stop #{id}"
+    sh "docker commit #{id} #{TAG}:#{i}"
 	end
 end
 
-task :stop do
-	sh "docker ps"
-	nodes.each do |node|
-		sh "docker stop #{node}"
-		sh "docker rm #{node}"
+task :run do
+	$nodes.each do |i|
+		id = `cat ./services/#{i}/Procfile | docker run -d #{TAG}:#{i} /bin/bash -c "/bin/bash"`.chomp
+    sh "docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} "
 	end
+	sh "docker ps"
 end

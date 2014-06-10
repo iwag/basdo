@@ -1,6 +1,7 @@
 # name iwag/buildstep
 
-FROM centos:6.4
+#FROM centos:6.4
+FROM iwag/ruby-misc
 MAINTAINER iwag
 
 RUN mkdir /common
@@ -9,7 +10,7 @@ RUN sh /common/setup.sh
 
 RUN mkdir /services
 ADD ./services /services
-RUN sh /services/*/setup.sh
+RUN ls -1 /services/*/setup.sh | xargs bash 
 
 EXPOSE 22
 CMD /usr/sbin/sshd -D
