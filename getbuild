@@ -1,0 +1,26 @@
+#!/bin/bash
+set -e
+name="$1" # node name 
+
+TAG="iwag/buildstep"
+
+docker ps
+
+echo "stoping..."
+#docker stop _${name}
+
+echo "removing..."
+#docker rm _${name}
+
+echo "preparing ..."
+ID=$(cat | docker run -i -a stdin iwag/buildstep/${name}:config /bin/bash -c "mkdir /app && tar -xC /app ")
+docker wait ${ID}
+docker stop ${ID}
+docker commit ${ID} ${TAG}/${name}:start
+
+echo "starting ... ${name}"
+PORTS=$(ruby -e "require 'json'; j=JSON.parse(File.read('config_node.json')); p=j['${name}']['port']; if p!=nil then puts p.map{|i| %(-p #{i['host']}:#{i['guest']}) }.join('')  else puts %() end")
+docker run ${PORTS} --name _${name} -d ${TAG}/${name}:start /bin/bash /common/starter ${name}
+
+docker attach --no-stdin=true _${name}
+docker logs _${name}

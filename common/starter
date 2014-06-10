@@ -1,0 +1,6 @@
+#!/bin/bash 
+SERVICE="$1"
+
+# cat /app/Procfile
+cat /services/${SERVICE}/Procfile
+sh /services/${SERVICE}/Procfile

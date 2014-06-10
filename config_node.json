@@ -1,5 +1,10 @@
-[
-  "nodejs",
-  "redis"
-]
+{
+  "nodejs":{
+    "service":"nodejs",
+    "port":[{"host":55000, "guest":5000}]
+  },
+  "redis":{
+    "service":"redis"
+  }
+}
 
