@@ -1,10 +1,11 @@
 require 'json'
 
-$nodes =  JSON.parse(File.read("config_node.json"))
+$nodes =  JSON.parse(File.read(ENV['CONFIG'] || "config_node.json"))
 
 # variable
 TAG = "iwag/buildstep"
-RUN_OPT=''
+DNS_OPT=ENV['DNS_OPT'] || ''
+USER_OPT=ENV['USER_OPT'] || ''
 
 def nodes
   $nodes.keys
@@ -15,9 +16,10 @@ task :build do
 end
 
 task :config do
-	nodes.each do |i|
+  # like buildpack
+	$nodes.map{ |node,conf| conf['service'] }.uniq do |i|
     # setting gonyo gonyo ...
-    id = `cat ./services/#{i}/config.sh | docker run #{RUN_OPT} -i -a stdin #{TAG} /bin/bash `.chomp
+    id = `cat ./services/#{i}/config.sh | docker run #{USER_OPT} #{DNS_OPT} -i -a stdin #{TAG} /bin/bash `.chomp
     sh "docker attach #{id}"
     sh "docker wait #{id}"
     sh "docker stop #{id}"
@@ -32,14 +34,31 @@ task :config do
 end
 
 task :run do
-	nodes.each do |i|
-    id = `cat ./services/#{i}/Procfile | docker run --name _#{i} -d #{TAG}/#{i}:config /bin/bash -c "/bin/bash"`.chomp
+
+	$nodes.each do |node,conf|
+    port_opt = "" 
+    port_opt = conf["port"].map{|i| "-p "+i["host"].to_s+":"+i["guest"].to_s}.join(" ") unless conf["port"].empty?
+    cmd = %(cat ./services/#{node}/Procfile | docker run #{USER_OPT} #{DNS_OPT} #{port_opt} --name _#{node} -d #{conf['service']}:config /bin/bash -c "/bin/bash")
+    puts cmd
+    id = `#{cmd}`.chomp
     sh "docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} "
 	end
 	sh "docker ps"
 end
 
-task :stop do
+task :run_ssh do
+	$nodes.each do |node,conf|
+    port_opt = ""
+    port_opt = conf["port"].map{|i| "-p "+i["host"].to_s+":"+i["guest"].to_s}.join(" ") unless conf["port"].empty?
+    cmd = %(docker run #{DNS_OPT} -u 0 #{port_opt} --name _#{node} -d #{conf['service']}:installed /usr/sbin/sshd -D)
+    puts cmd
+    id = `#{cmd}`.chomp
+    sh "docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} "
+  end
+	sh "docker ps"
+end
+
+task :kill do
   nodes.each do |i|
     puts "stopping _#{i}"
     sh "docker stop _#{i}"
@@ -49,9 +68,9 @@ end
 
 task :setup_portforward do
   $nodes.each do |k,v|
-    v[:port].each do |p|
-      hport = p[:host]
-      sh 'VBoxManage modifyvm "boot2docker-vm" --natpf1 "port#{hport} #{hport},tcp,,#{hport},,#{hport}"'
+    v["port"].each do |p|
+      hport = p["host"]
+      sh %(VBoxManage modifyvm "boot2docker-vm" --natpf1 "port#{hport} #{hport},tcp,,#{hport},,#{hport}")
     end
   end
 end
