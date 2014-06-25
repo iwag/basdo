@@ -1,8 +1,10 @@
 require 'json'
 
-$nodes = JSON.parse(File.read("config_node.json"))
+$nodes =  JSON.parse(File.read("config_node.json"))
 
+# variable
 TAG = "iwag/buildstep"
+RUN_OPT=''
 
 def nodes
   $nodes.keys
@@ -15,23 +17,23 @@ end
 task :config do
 	nodes.each do |i|
     # setting gonyo gonyo ...
-		id = `cat ./services/#{i}/config.sh | docker run -i -a stdin #{TAG} /bin/bash -c "/bin/bash"`.chomp
-    #sh "docker attach #{id}"
+    id = `cat ./services/#{i}/config.sh | docker run #{RUN_OPT} -i -a stdin #{TAG} /bin/bash `.chomp
+    sh "docker attach #{id}"
     sh "docker wait #{id}"
     sh "docker stop #{id}"
-    sh "docker commit #{id} #{TAG}/#{i}"
+    sh "docker commit #{id} #{i}"
     # config on host
-		id = `docker run -d #{TAG}/#{i} /usr/sbin/sshd -D`.chomp
-		ip = `docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} `.chomp
+    id = `docker run -d #{i} /usr/sbin/sshd -D`.chomp
+    ip = `docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} `.chomp
     # sh "services/#{i}/config_host.sh" if config_host exists
     sh "docker stop #{id}"
-    sh "docker commit #{id} #{TAG}/#{i}:config"
+    sh "docker commit #{id} #{i}:config"
 	end
 end
 
 task :run do
 	nodes.each do |i|
-		id = `cat ./services/#{i}/Procfile | docker run --name _#{i} -d #{TAG}/#{i}:config /bin/bash -c "/bin/bash"`.chomp
+    id = `cat ./services/#{i}/Procfile | docker run --name _#{i} -d #{TAG}/#{i}:config /bin/bash -c "/bin/bash"`.chomp
     sh "docker inspect --format='{{.NetworkSettings.IPAddress}}' #{id} "
 	end
 	sh "docker ps"
