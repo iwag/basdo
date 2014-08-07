@@ -12,7 +12,7 @@ def nodes
 end
 
 def docker
-   "sudo docker"
+   "docker"
 end
 
 task :build do

@@ -1,6 +1,5 @@
 # name iwag/buildstep
 
-#FROM centos:6.4
 FROM iwag/centall
 MAINTAINER iwag
 
