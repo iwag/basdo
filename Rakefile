@@ -57,7 +57,7 @@ task :run_ssh do
     cmd = %(#{docker} run #{DNS_OPT} -u 0 #{port_opt} --name _#{node} -d #{conf['service']}:config /usr/sbin/sshd -D)
     puts cmd
     id = `#{cmd}`.chomp
-#    sh "#{docker} inspect --format='{{.NetworkSettings.IPAddress}}' #{id} "
+    sh "#{docker} inspect --format='{{.NetworkSettings.IPAddress}}' #{id} "
   end
 	sh "#{docker} ps"
 end
@@ -71,6 +71,7 @@ task :kill do
 end
 
 task :setup_portforward do
+  # Fix me 
   $nodes.each do |k,v|
     v["port"].each do |p|
       hport = p["host"]
