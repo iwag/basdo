@@ -21,7 +21,7 @@ end
 
 task :config do
   # like buildpack
-	$nodes.map{ |node,conf| conf['service'] }.uniq do |i|
+	$nodes.map{ |node,conf| conf['service'] }.uniq.each do |i|
     # setting gonyo gonyo ...
     id = `cat ./services/#{i}/config.sh | #{docker} run #{USER_OPT} #{DNS_OPT} -i -a stdin #{TAG} /bin/bash `.chomp
     sh "#{docker} attach #{id}"
